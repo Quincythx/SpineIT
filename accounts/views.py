@@ -30,16 +30,22 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = PasswordResetTokenGenerator().make_token(user)
-        verify_link = f"http://localhost:3000/verify-email?uid={uid}&token={token}"
+        try:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = PasswordResetTokenGenerator().make_token(user)
+            verify_link = f"http://localhost:3000/verify-email?uid={uid}&token={token}"
 
-        send_mail(
-            subject="Verify your Book Review Platform account",
-            message=f"Welcome! Click this link to verify your email: {verify_link}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-        )
+            send_mail(
+                subject="Verify your Book Review Platform account",
+                message=f"Welcome! Click this link to verify your email: {verify_link}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+            )
+        except Exception as e:
+            # Log the error but don't block registration - user can still log in
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send verification email to {user.email}: {e}")
 
 
 
