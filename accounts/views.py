@@ -13,63 +13,84 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.core.mail import send_mail
 from django.conf import settings
-from .serializers import PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+from .serializers import (
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
+    SendVerificationCodeSerializer,
+    VerifyCodeAndRegisterSerializer,
+)
 
 from rest_framework.permissions import IsAuthenticated
 from .serializers import UserProfileSerializer
 
 from django.utils.encoding import force_str
+from django.utils import timezone
+from .models import EmailVerificationCode
 
 User = get_user_model()
 
 
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
-    permission_classes = [AllowAny]
-
-    def perform_create(self, serializer):
-        user = serializer.save()
-        try:
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = PasswordResetTokenGenerator().make_token(user)
-            verify_link = f"http://localhost:3000/verify-email?uid={uid}&token={token}"
-
-            send_mail(
-                subject="Verify your Book Review Platform account",
-                message=f"Welcome! Click this link to verify your email: {verify_link}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-            )
-        except Exception as e:
-            # Log the error but don't block registration - user can still log in
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to send verification email to {user.email}: {e}")
-
-
-
-class VerifyEmailView(APIView):
+class SendVerificationCodeView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        uid = request.data.get('uid')
-        token = request.data.get('token')
+        serializer = SendVerificationCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
 
+        # Generate a 6-digit code
+        code = EmailVerificationCode.generate_code()
+
+        # Store the code with 10-minute expiry
+        EmailVerificationCode.objects.create(
+            email=email,
+            code=code,
+            expires_at=timezone.now() + timezone.timedelta(minutes=10),
+        )
+
+        # Send the code via email
         try:
-            user_id = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=user_id)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return Response({"detail": "Invalid verification link."}, status=status.HTTP_400_BAD_REQUEST)
+            send_mail(
+                subject="Your SpineIT Verification Code",
+                message=f"Your verification code is: {code}\n\nThis code will expire in 10 minutes.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+            )
+        except Exception as e:
+            # Log the error but don't block - the code is still stored for verification
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send verification code to {email}: {e}")
+            return Response(
+                {"detail": "Failed to send verification email. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        if not PasswordResetTokenGenerator().check_token(user, token):
-            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.is_verified = True
-        user.save()
-        return Response({"detail": "Email verified successfully."}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "Verification code sent to your email."},
+            status=status.HTTP_200_OK,
+        )
 
 
+class VerifyCodeAndRegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = VerifyCodeAndRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data['user']
+
+        # Generate JWT tokens for the new user so they're logged in immediately
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "user": UserProfileSerializer(user).data,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class LogoutView(APIView):
@@ -106,7 +127,6 @@ class PasswordResetRequestView(APIView):
         )
         return Response({"detail": "Password reset email sent."}, status=status.HTTP_200_OK)
     
-
 
 
 class PasswordResetConfirmView(APIView):
