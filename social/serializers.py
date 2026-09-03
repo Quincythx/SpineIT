@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import Follow
+from .models import Follow, Notification
 
 User = get_user_model()
 
@@ -22,3 +22,12 @@ class FollowSerializer(serializers.ModelSerializer):
         if value == request.user:
             raise serializers.ValidationError("You can't follow yourself.")
         return value
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    actor = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = ['id', 'actor', 'type', 'review', 'read', 'created_at']
+        read_only_fields = fields
