@@ -117,3 +117,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'bio', 'avatar']
         read_only_fields = ['id']
+
+
+class PublicUserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'bio', 'avatar', 'date_joined']
+        read_only_fields = fields

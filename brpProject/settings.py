@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'reviews',
+    'social',
     'drf_spectacular',
     'django_filters',
 ]

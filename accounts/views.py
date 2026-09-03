@@ -21,7 +21,7 @@ from .serializers import (
 )
 
 from rest_framework.permissions import IsAuthenticated
-from .serializers import UserProfileSerializer
+from .serializers import UserProfileSerializer, PublicUserProfileSerializer
 
 from django.utils.encoding import force_str
 from django.utils import timezone
@@ -148,3 +148,14 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class PublicProfileView(generics.RetrieveAPIView):
+    serializer_class = PublicUserProfileSerializer
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+        return generics.get_object_or_404(
+            User.objects.filter(is_active=True),
+            username__iexact=self.kwargs['username'],
+        )
