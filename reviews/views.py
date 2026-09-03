@@ -74,6 +74,16 @@ class GenreViewSet(viewsets.ModelViewSet):
     serializer_class = GenreSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        name = serializer.validated_data['name'].strip()
+        existing = Genre.objects.filter(name__iexact=name).first()
+        if existing:
+            return Response(self.get_serializer(existing).data, status=status.HTTP_200_OK)
+        genre = serializer.save(name=name)
+        return Response(self.get_serializer(genre).data, status=status.HTTP_201_CREATED)
+
 
 
 

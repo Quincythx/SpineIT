@@ -4,6 +4,8 @@ from .models import Genre, Book, Review, Comment, Like, Bookmark
 
 
 class GenreSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=100)
+
     class Meta:
         model = Genre
         fields = ['id', 'name']

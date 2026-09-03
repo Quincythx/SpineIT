@@ -120,16 +120,19 @@ All endpoints are prefixed with `/api/`. Endpoints marked 🔒 require a valid J
 
 ### Auth — `/api/auth/`
 
+Registration is a two-step, email-verified flow (not a single "register" call) — this is deliberate: it means the database never contains an account with an unconfirmed email address.
+
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `register/` | Register a new user |
+| POST | `send-code/` | Step 1: send a 6-digit verification code to an email address |
+| POST | `verify-code-register/` | Step 2: confirm the code and create the account (returns JWT tokens, already verified) |
 | POST | `login/` | Log in — returns access + refresh tokens |
 | POST | `login/refresh/` | Exchange a refresh token for a new access token |
 | POST | `logout/` | Log out — blacklists the refresh token |
-| POST | `verify-email/` | Confirm email using the token sent by email |
 | POST | `password-reset/` | Request a password reset email |
 | POST | `password-reset-confirm/` | Set a new password using uid + token |
 | GET / PATCH | `profile/` 🔒 | View or update your own profile (including avatar) |
+| GET | `/api/users/<username>/` | Public profile lookup by username (no auth required) |
 
 ### Reviews — `/api/reviews/`
 
