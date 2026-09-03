@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/users/<str:username>/', PublicProfileView.as_view(), name='public-profile'),
     path('api/', include('reviews.urls')),
     path('api/', include('social.urls')),
+    path('api/', include('reading_lists.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]

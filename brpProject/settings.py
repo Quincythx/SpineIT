@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'reviews',
     'social',
+    'reading_lists',
     'drf_spectacular',
     'django_filters',
 ]
