@@ -1,5 +1,5 @@
 from rest_framework.routers import DefaultRouter
-from .views import BookViewSet, ReviewViewSet, GenreViewSet, CommentViewSet, LikeViewSet, BookmarkViewSet
+from .views import BookViewSet, ReviewViewSet, GenreViewSet, CommentViewSet, LikeViewSet, BookmarkViewSet, FavoriteViewSet
 
 router = DefaultRouter()
 router.register('books', BookViewSet, basename='book')
@@ -8,6 +8,7 @@ router.register('genres', GenreViewSet, basename='genre')
 router.register('comments', CommentViewSet, basename='comment')
 router.register('likes', LikeViewSet, basename='like')
 router.register('bookmarks', BookmarkViewSet, basename='bookmark')
+router.register('favorites', FavoriteViewSet, basename='favorite')
 
 
 urlpatterns = router.urls

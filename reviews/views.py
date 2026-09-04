@@ -2,10 +2,10 @@ from django.db.models import Avg, Count
 from django.shortcuts import render
 from rest_framework import mixins, serializers, status, viewsets, permissions, filters
 from rest_framework.response import Response
-from .models import Book, Review, Genre, Comment, Like, Bookmark
+from .models import Book, Review, Genre, Comment, Like, Bookmark, Favorite
 from .serializers import (
     BookSerializer, BookDetailSerializer, ReviewSerializer, GenreSerializer,
-    CommentSerializer, LikeSerializer, BookmarkSerializer,
+    CommentSerializer, LikeSerializer, BookmarkSerializer, FavoriteSerializer,
 )
 from .permissions import IsOwnerOrReadOnly
 from django.db import IntegrityError
@@ -134,3 +134,18 @@ class BookmarkViewSet(viewsets.ModelViewSet):
             serializer.save(user=self.request.user)
         except IntegrityError:
             raise serializers.ValidationError("You already bookmarked this review.")
+
+
+class FavoriteViewSet(viewsets.ModelViewSet):
+    serializer_class = FavoriteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Favorite.objects.filter(user=self.request.user) \
+            .select_related('book__genre').order_by('-created_at')
+
+    def perform_create(self, serializer):
+        try:
+            serializer.save(user=self.request.user)
+        except IntegrityError:
+            raise serializers.ValidationError("You already favorited this book.")
