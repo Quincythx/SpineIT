@@ -49,7 +49,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
     search_fields = ['book__title', 'book__author', 'book__genre__name']
 
     def get_queryset(self):
-        queryset = Review.objects.select_related('book__genre', 'user').order_by('-created_at')
+        queryset = Review.objects.select_related('book__genre', 'user').annotate(
+            like_count=Count('likes')
+        ).order_by('-created_at')
 
         book_id = self.request.query_params.get('book')
         if book_id:

@@ -55,7 +55,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     book_id = serializers.PrimaryKeyRelatedField(
         queryset=Book.objects.all(), source='book', write_only=True
     )
-    like_count = serializers.SerializerMethodField()
+    like_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Review
@@ -66,9 +66,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
-    def get_like_count(self, obj):
-        return obj.likes.count()
-    
 
 
 class CommentSerializer(serializers.ModelSerializer):
