@@ -1,10 +1,19 @@
 from django.db import IntegrityError
-from rest_framework import viewsets, permissions, serializers
+from django.db.models import Count
+from rest_framework import generics, viewsets, permissions, serializers
 from rest_framework.decorators import action
+from rest_framework.pagination import CursorPagination
 from rest_framework.response import Response
+from reviews.models import Review
+from reviews.serializers import ReviewSerializer
 from .models import Follow, Notification
 from .serializers import FollowSerializer, NotificationSerializer
 from .permissions import IsFollowerOrReadOnly
+
+
+class FeedCursorPagination(CursorPagination):
+    page_size = 10
+    ordering = ('-created_at', '-pk')
 
 
 class FollowViewSet(viewsets.ModelViewSet):
@@ -27,6 +36,27 @@ class FollowViewSet(viewsets.ModelViewSet):
             serializer.save(follower=self.request.user)
         except IntegrityError:
             raise serializers.ValidationError("You're already following this user.")
+
+
+class FeedView(generics.ListAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    pagination_class = FeedCursorPagination
+
+    def get_queryset(self):
+        queryset = Review.objects.select_related('book__genre', 'user').annotate(
+            like_count=Count('likes')
+        ).order_by('-created_at', '-pk')
+
+        if self.request.query_params.get('scope') == 'following':
+            if not self.request.user.is_authenticated:
+                return queryset.none()
+            followed_ids = Follow.objects.filter(
+                follower=self.request.user
+            ).values_list('following_id', flat=True)
+            queryset = queryset.filter(user_id__in=followed_ids)
+
+        return queryset
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
